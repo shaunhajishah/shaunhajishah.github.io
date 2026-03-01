@@ -1,10 +1,102 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>My Personal Website</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shaun</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1e1e1e; overflow: hidden; }
+    canvas { display: block; }
+  </style>
 </head>
 <body>
-    <h1>Welcome to personal website.</h1>
-    <p>Hello World! This is a simple webpage hosted on GitHub Pages.</p>
+  <canvas id="c"></canvas>
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+  <script>
+    const { Engine, Runner, Bodies, Body, World, Mouse, MouseConstraint } = Matter;
+
+    const canvas = document.getElementById('c');
+    const ctx    = canvas.getContext('2d');
+
+    const W = canvas.width  = window.innerWidth;
+    const H = canvas.height = window.innerHeight;
+
+    const FONT_SIZE = Math.min(W * 0.22, 140);
+    const FONT      = `${FONT_SIZE}px 'Fredoka One'`;
+    const COLORS    = ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF'];
+
+    // Physics engine
+    const engine = Engine.create();
+    const world  = engine.world;
+
+    // Static boundary walls
+    World.add(world, [
+      Bodies.rectangle(W / 2, H + 25,  W * 3, 50,  { isStatic: true }),  // floor
+      Bodies.rectangle(-25,   H / 2,   50,    H * 3, { isStatic: true }), // left
+      Bodies.rectangle(W + 25, H / 2,  50,    H * 3, { isStatic: true }), // right
+    ]);
+
+    const letters = [];
+
+    // Wait for Fredoka One to load so measureText is accurate
+    document.fonts.ready.then(() => {
+      ctx.font = FONT;
+      const chars = ['S', 'h', 'a', 'u', 'n'];
+
+      chars.forEach((char, i) => {
+        const bw = ctx.measureText(char).width * 0.88;
+        const bh = FONT_SIZE * 0.88;
+        const x  = W / 2 + (i - 2) * (FONT_SIZE * 0.72);
+        const y  = -(FONT_SIZE * 1.2 + i * FONT_SIZE * 0.7); // stagger drop heights
+
+        const body = Bodies.rectangle(x, y, bw, bh, {
+          restitution: 0.6,
+          friction:    0.35,
+          frictionAir: 0.008,
+        });
+        Body.setVelocity(body,        { x: (Math.random() - 0.5) * 4, y: 0 });
+        Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.15);
+
+        World.add(world, body);
+        letters.push({ body, char, color: COLORS[i] });
+      });
+
+      // Mouse / touch drag
+      const mouse = Mouse.create(canvas);
+      World.add(world, MouseConstraint.create(engine, {
+        mouse,
+        constraint: { stiffness: 0.2 },
+      }));
+    });
+
+    Runner.run(Runner.create(), engine);
+
+    // Render loop
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.font         = FONT;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+
+      for (const { body, char, color } of letters) {
+        ctx.save();
+        ctx.translate(body.position.x, body.position.y);
+        ctx.rotate(body.angle);
+        ctx.shadowColor   = 'rgba(0,0,0,0.55)';
+        ctx.shadowBlur    = 20;
+        ctx.shadowOffsetY = 8;
+        ctx.fillStyle     = color;
+        ctx.fillText(char, 0, 0);
+        ctx.restore();
+      }
+
+      requestAnimationFrame(draw);
+    }
+    draw();
+  </script>
 </body>
 </html>
